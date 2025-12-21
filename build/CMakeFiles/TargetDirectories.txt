@@ -1,0 +1,8 @@
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/pn_discovery.dir
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/test_discovery.dir
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/edit_cache.dir
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/rebuild_cache.dir
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/list_install_components.dir
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/install.dir
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/install/local.dir
+D:/claude_sandbox/phoenix-discovery/build/CMakeFiles/install/strip.dir
