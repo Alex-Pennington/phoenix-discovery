@@ -1,2 +1,0 @@
-C:\mingw64-12.2.0\mingw64\bin\ar.exe qc libpn_discovery.a CMakeFiles/pn_discovery.dir/src/pn_discovery.c.obj
-C:\mingw64-12.2.0\mingw64\bin\ranlib.exe libpn_discovery.a

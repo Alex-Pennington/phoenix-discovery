@@ -1,0 +1,13 @@
+# Build outputs
+build/
+*.exe
+*.a
+*.o
+*.obj
+*.lib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~

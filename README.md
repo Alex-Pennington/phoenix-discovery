@@ -28,19 +28,31 @@ All programs:
 3. Broadcast "bye" on shutdown
 4. Listen for announcements from other programs
 
-## Building
+## Integration
+
+This library is designed to be used as a **Git submodule** in Phoenix Nest SDR programs.
+
+### Adding to Your Project
 
 ```bash
-mkdir build && cd build
-cmake ..
-cmake --build .
+git submodule add https://github.com/Alex-Pennington/phoenix-discovery.git external/phoenix-discovery
 ```
 
-### Windows (MSYS2)
-```bash
-mkdir build && cd build
-cmake -G "MSYS Makefiles" ..
-make
+### CMake Integration
+
+Add to your `CMakeLists.txt`:
+```cmake
+# Add phoenix-discovery subdirectory
+add_subdirectory(external/phoenix-discovery)
+
+# Link against your executable
+target_link_libraries(your_app PRIVATE pn_discovery)
+```
+
+### Include in Your Code
+
+```c
+#include "pn_discovery.h"
 ```
 
 ## Usage
@@ -150,26 +162,39 @@ int pn_get_service_count(void);
 
 ## Service Types
 
-| Type | Description |
-|------|-------------|
-| `sdr_server` | SDRplay I/Q source |
-| `signal_splitter` | Bandwidth reducer / edge node |
-| `signal_relay` | Cloud hub |
-| `waterfall` | Display client |
-| `controller` | SDR control GUI |
-| `detector` | Signal detector |
+Phoenix Nest programs use this library differently based on their role:
 
-## Testing
+### Endpoint Programs (UDP Discovery Only)
 
-Run two instances to test discovery:
+These programs use **UDP broadcast discovery only** to find each other on the local network:
+
+| Type | Description | Announces | Listens For |
+|------|-------------|-----------|-------------|
+| `sdr_server` | SDR hardware (e.g., SDRplay) | I/Q data source with ctrl_port & data_port | Clients needing I/Q data |
+| `waterfall` | Spectrum display client | Display endpoint | `sdr_server` or `signal_splitter` |
+| `controller` | SDR control interface | Control endpoint | `sdr_server` for tuning/config |
+| `detector` | Signal detection/analysis | Analysis endpoint | `sdr_server` or signal sources |
+
+**Usage**: Call `pn_announce()` + `pn_listen()`, use `pn_find_service()` to discover needed services.
+
+## Development Testing
+
+The library includes a test program for development purposes only. To build and test:
 
 ```bash
+mkdir build && cd build
+cmake ..
+cmake --build .
+
+# Run two instances to test discovery:
 # Terminal 1 - Server
 ./test_discovery server KY4OLB-SDR1
 
 # Terminal 2 - Client
 ./test_discovery client WF1
 ```
+
+**Note**: Delete the `build/` directory when done - this library is not meant to be built standalone in production use.
 
 ## License
 
