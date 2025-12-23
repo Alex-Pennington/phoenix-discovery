@@ -67,6 +67,10 @@ static struct {
     thread_t announce_thread;
     bool announce_running;
     
+    /* Reactive re-announce (when we see new services) */
+    volatile bool reannounce_pending;
+    volatile int reannounce_delay_sec;
+    
     /* Listening */
     bool listening;
     pn_service_cb callback;
@@ -88,6 +92,7 @@ static int build_bye_message(char *buf, int maxlen);
 static int parse_message(const char *buf, int len, const char *sender_ip);
 static void broadcast_message(const char *msg, int len);
 static int get_random_interval(void);
+static int get_reannounce_delay(void);
 #ifdef _WIN32
 static DWORD WINAPI announce_thread_func(LPVOID param);
 static DWORD WINAPI listen_thread_func(LPVOID param);
@@ -434,6 +439,14 @@ static int parse_message(const char *buf, int len, const char *sender_ip) {
                                     g_discovery.callback_userdata);
             }
             printf("pn_discovery: found %s '%s' at %s:%d\n", svc, id, ip, port);
+            
+            /* Trigger reactive re-announce so the new service discovers us */
+            if (g_discovery.announcing && !g_discovery.reannounce_pending) {
+                g_discovery.reannounce_delay_sec = get_reannounce_delay();
+                g_discovery.reannounce_pending = true;
+                printf("pn_discovery: will re-announce in %d sec (new service joined)\n",
+                       g_discovery.reannounce_delay_sec);
+            }
         }
         
     } else if (strcmp(cmd, "bye") == 0) {
@@ -475,6 +488,11 @@ static int get_random_interval(void) {
     return PN_ANNOUNCE_MIN_SEC + (rand() % (range + 1));
 }
 
+/* Get random re-announce interval (shorter, for responding to new services) */
+static int get_reannounce_delay(void) {
+    return 2 + (rand() % 9);  /* 2-10 seconds */
+}
+
 /* Announce thread */
 #ifdef _WIN32
 static DWORD WINAPI announce_thread_func(LPVOID param) {
@@ -494,16 +512,33 @@ static void* announce_thread_func(void *param) {
     while (g_discovery.announce_running) {
         int interval = get_random_interval();
         
-        /* Sleep in 1-second increments so we can stop quickly */
+        /* Sleep in 1-second increments, checking for re-announce requests */
         for (int i = 0; i < interval && g_discovery.announce_running; i++) {
             sleep_ms(1000);
+            
+            /* Check for reactive re-announce (new service joined network) */
+            if (g_discovery.reannounce_pending) {
+                g_discovery.reannounce_delay_sec--;
+                if (g_discovery.reannounce_delay_sec <= 0) {
+                    g_discovery.reannounce_pending = false;
+                    len = build_helo_message(msg, sizeof(msg));
+                    if (len > 0) {
+                        printf("pn_discovery: re-announcing (reactive)\n");
+                        broadcast_message(msg, len);
+                    }
+                    break;  /* Reset the main interval */
+                }
+            }
         }
         
         if (!g_discovery.announce_running) break;
         
-        len = build_helo_message(msg, sizeof(msg));
-        if (len > 0) {
-            broadcast_message(msg, len);
+        /* Regular periodic announcement (only if we didn't just re-announce) */
+        if (!g_discovery.reannounce_pending) {
+            len = build_helo_message(msg, sizeof(msg));
+            if (len > 0) {
+                broadcast_message(msg, len);
+            }
         }
     }
     
